@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Kassasimulator</title>
+    <meta name="theme-color" content="#10b981" />
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icon-192.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <style>
+      @keyframes fall { 0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(110vh) rotate(360deg); opacity: 1; } }
+    </style>
+  </head>
+  <body class="min-h-screen bg-emerald-50">
+    <div id="root"></div>
+    <script type="module">
+
+const { useState, useMemo } = React;
+
+const ALL_PRODUCTS = [
+  // Mejeri
+  { id: "milk", name: "Mjölk 1L", price: 15, category: "mejeri", emoji: "🥛" },
+  { id: "yoghurt", name: "Yoghurt naturell", price: 22, category: "mejeri", emoji: "🥣" },
+  { id: "filmjolk", name: "Filmjölk", price: 20, category: "mejeri", emoji: "🥣" },
+  { id: "kvarg", name: "Kvarg vanilj", price: 18, category: "mejeri", emoji: "🥣" },
+  { id: "cheese", name: "Hushållsost", price: 49, category: "mejeri", emoji: "🧀" },
+  { id: "butter", name: "Smör", price: 34, category: "mejeri", emoji: "🧈" },
+  { id: "cream", name: "Grädde 3dl", price: 25, category: "mejeri", emoji: "🥛" },
+  { id: "cottage", name: "Keso", price: 24, category: "mejeri", emoji: "🥣" },
+
+  // Frukt och grönt
+  { id: "banana", name: "Banan", price: 6, category: "frukt och grönt", emoji: "🍌" },
+  { id: "apple", name: "Äpple rött", price: 7, category: "frukt och grönt", emoji: "🍎" },
+  { id: "orange", name: "Apelsin", price: 8, category: "frukt och grönt", emoji: "🍊" },
+  { id: "cucumber", name: "Gurka", price: 12, category: "frukt och grönt", emoji: "🥒" },
+  { id: "onion", name: "Gul lök 1kg", price: 15, category: "frukt och grönt", emoji: "🧅" },
+  { id: "carrot", name: "Morötter 1kg", price: 14, category: "frukt och grönt", emoji: "🥕" },
+  { id: "lettuce", name: "Salladshuvud", price: 19, category: "frukt och grönt", emoji: "🥬" },
+  { id: "tomato", name: "Tomat", price: 5, category: "frukt och grönt", emoji: "🍅" },
+  { id: "potato", name: "Potatis 1kg", price: 15, category: "frukt och grönt", emoji: "🥔" },
+  { id: "strawberry", name: "Jordgubbar 500g", price: 35, category: "frukt och grönt", emoji: "🍓" },
+
+  // Kött (och fisk)
+  { id: "beef", name: "Nötkött 500g", price: 69, category: "kött", emoji: "🥩" },
+  { id: "minced", name: "Köttfärs 500g", price: 55, category: "kött", emoji: "🥩" },
+  { id: "chicken", name: "Kycklingfilé", price: 59, category: "kött", emoji: "🍗" },
+  { id: "falukorv", name: "Falukorv", price: 34, category: "kött", emoji: "🌭" },
+  { id: "bacon", name: "Bacon", price: 34, category: "kött", emoji: "🥓" },
+  { id: "meatballs", name: "Köttbullar frysta", price: 49, category: "kött", emoji: "🍽️" },
+  { id: "salmon", name: "Laxfilé 2-pack", price: 89, category: "kött", emoji: "🐟" },
+  { id: "sausage", name: "Chorizo 300g", price: 39, category: "kött", emoji: "🌭" },
+
+  // Hygien
+  { id: "toothpaste", name: "Tandkräm", price: 25, category: "hygien", emoji: "🪥" },
+  { id: "toothbrush", name: "Tandborste", price: 19, category: "hygien", emoji: "🪥" },
+  { id: "soap", name: "Tvål", price: 15, category: "hygien", emoji: "🧼" },
+  { id: "shampoo", name: "Schampo", price: 39, category: "hygien", emoji: "🧴" },
+  { id: "deo", name: "Deodorant", price: 45, category: "hygien", emoji: "🧴" },
+  { id: "wipes", name: "Våtservetter", price: 29, category: "hygien", emoji: "🧻" },
+  { id: "toiletpaper", name: "Toalettpapper 4-pack", price: 29, category: "hygien", emoji: "🧻" },
+
+  // Bröd (matbröd + fikabröd)
+  { id: "loaf", name: "Limpa fullkorn", price: 28, category: "bröd", emoji: "🍞" },
+  { id: "rolls", name: "Frallor 6-pack", price: 22, category: "bröd", emoji: "🥯" },
+  { id: "baguette", name: "Baguette", price: 20, category: "bröd", emoji: "🥖" },
+  { id: "flatbread", name: "Tunnbröd", price: 24, category: "bröd", emoji: "🍞" },
+  { id: "kanelbulle", name: "Kanelbulle", price: 18, category: "bröd", emoji: "🥐" },
+  { id: "muffin", name: "Muffins choklad", price: 16, category: "bröd", emoji: "🧁" },
+  { id: "cookie", name: "Chokladkakor 200g", price: 25, category: "bröd", emoji: "🍪" },
+  { id: "wiener", name: "Wienerbröd", price: 19, category: "bröd", emoji: "🥐" },
+];
+
+const rndInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+function productById(id) {
+  const p = ALL_PRODUCTS.find(x => x.id === id);
+  if (!p) throw new Error("Okänd produkt: " + id);
+  return p;
+}
+function sumCart(cart) {
+  return Object.entries(cart).reduce((acc, [pid, qty]) => acc + productById(pid).price * qty, 0);
+}
+function formatCurrency(n) {
+  try { return new Intl.NumberFormat("sv-SE", { style: "currency", currency: "SEK", maximumFractionDigits: 0 }).format(n); }
+  catch { return n.toFixed(0) + " kr"; }
+}
+function Badge({ children }) {
+  return React.createElement("span", {className:"inline-flex items-center rounded-full bg-neutral-200 px-2 py-0.5 text-xs font-medium text-neutral-800"}, children);
+}
+
+function Kassasimulator() {
+  const { useEffect } = React;
+  const [category, setCategory] = useState("mejeri");
+  const [search, setSearch] = useState("");
+  const [cart, setCart] = useState(() => generateCart());
+  const [scanned, setScanned] = useState({});
+  const [wantsReceipt, setWantsReceipt] = useState(Math.random() < 0.5);
+  const [printedReceipt, setPrintedReceipt] = useState(false);
+  const [score, setScore] = useState(0);
+  const [customers, setCustomers] = useState(0);
+  const [feedback, setFeedback] = useState("");
+  const [soundOn, setSoundOn] = useState(true);
+  const [celebrate, setCelebrate] = useState(false);
+
+  function useBeep() {
+    const beep = (ok=true, enabled=true) => {
+      if (!enabled) return;
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = ok ? "sine" : "square";
+        o.frequency.value = ok ? 880 : 200;
+        o.connect(g); g.connect(ctx.destination);
+        g.gain.setValueAtTime(0.0001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
+        o.start();
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.15);
+        o.stop(ctx.currentTime + 0.16);
+      } catch {}
+    };
+    return beep;
+  }
+  const beep = useBeep();
+
+  function generateCart() {
+    const length = rndInt(1, 10);
+    const cart = {};
+    for (let i = 0; i < length; i++) {
+      const p = ALL_PRODUCTS[rndInt(0, ALL_PRODUCTS.length - 1)];
+      cart[p.id] = (cart[p.id] || 0) + 1;
+    }
+    return cart;
+  }
+
+  const filtered = useMemo(() => ALL_PRODUCTS.filter(
+    p => p.category === category && p.name.toLowerCase().includes(search.toLowerCase())
+  ), [category, search]);
+
+  const beltItems = useMemo(() => {
+    const arr = [];
+    Object.entries(cart).forEach(([pid, qty]) => {
+      const p = productById(pid);
+      for (let i=0; i<qty; i++) arr.push(p);
+    });
+    return arr;
+  }, [cart]);
+
+  const addScan = (pid) => setScanned(prev => ({...prev, [pid]: (prev[pid]||0)+1}));
+  const removeScan = (pid) => setScanned(prev => {
+    const q = (prev[pid]||0) - 1;
+    const next = {...prev};
+    if (q<=0) delete next[pid]; else next[pid] = q;
+    return next;
+  });
+  const clearScans = () => setScanned({});
+
+  function evaluateAndNext() {
+    let delta=0, correct=0, wrong=0;
+    const totalItems = Object.values(cart).reduce((a,b)=>a+b,0);
+    const productIds = new Set([...Object.keys(cart), ...Object.keys(scanned)]);
+    productIds.forEach(pid => {
+      const c = cart[pid] || 0; const s = scanned[pid] || 0;
+      const matched = Math.min(c, s);
+      const extras = Math.max(s - c, 0);
+      const missing = Math.max(c - s, 0);
+      correct += matched; wrong += extras + missing;
+    });
+    delta += correct * 2; delta += wrong * -1;
+    const receiptOk = wantsReceipt === printedReceipt; delta += receiptOk ? 2 : -1;
+
+    setScore(prev => prev + delta); setCustomers(n=>n+1);
+    const isPerfect = wrong === 0 && correct === totalItems && receiptOk;
+    setFeedback(`Rätt varor: ${correct} • Fel: ${wrong} • Kvitto: ${receiptOk ? "rätt" : "fel"} • ${delta >= 0 ? "+" : ""}${delta} poäng`);
+    beep(delta >= 0, soundOn);
+    if (isPerfect) { setCelebrate(true); setTimeout(()=>setCelebrate(false), 2200); }
+
+    setTimeout(() => {
+      setCart(generateCart()); setScanned({}); setWantsReceipt(Math.random() < 0.5); setPrintedReceipt(false);
+    }, 250);
+  }
+
+  const totalCartPrice = useMemo(() => sumCart(cart), [cart]);
+  const scannedPrice = useMemo(() => sumCart(scanned), [scanned]);
+
+  return (
+    React.createElement("div", {className:"min-h-screen w-full bg-gradient-to-b from-emerald-50 to-white text-neutral-800"},
+      celebrate && React.createElement("div", {className:"pointer-events-none fixed inset-0 z-50 flex items-center justify-center"},
+        React.createElement("div", {className:"absolute inset-0 overflow-hidden"},
+          Array.from({length:80}).map((_,i)=>React.createElement("span",{
+            key:i, className:"absolute top-[-10%] h-2 w-2 animate-[fall_2s_linear_forwards] rounded-sm",
+            style:{left:`${(i*13)%100}%`, transform:`rotate(${(i*73)%360}deg)`,
+                   background:["#10b981","#f59e0b","#ef4444","#3b82f6","#a855f7"][i%5],
+                   animationDelay:`${(i%20)*0.05}s`}
+          }))
+        ),
+        React.createElement("div",{className:"rounded-2xl bg-white/90 px-6 py-4 text-center shadow-2xl"},
+          React.createElement("div",{className:"text-2xl font-extrabold text-emerald-700"},"🎉 GRATTIS! Maxpoäng! 🎉"),
+          React.createElement("div",{className:"text-sm text-neutral-600"},"Alla varor rätt och kvittot stämde.")
+        ),
+        React.createElement("style", null, "@keyframes fall{0%{transform:translateY(-10vh) rotate(0deg);opacity:1;}100%{transform:translateY(110vh) rotate(360deg);opacity:1;}}")
+      ),
+
+      React.createElement("header",{className:"sticky top-0 z-10 border-b bg-white/80 backdrop-blur"},
+        React.createElement("div",{className:"mx-auto flex max-w-6xl items-center justify-between gap-4 p-4"},
+          React.createElement("div",{className:"flex items-center gap-3"},
+            React.createElement("span",{className:"text-2xl"},"🧾"),
+            React.createElement("h1",{className:"text-xl font-bold sm:text-2xl"},"Kassasimulator"),
+            React.createElement(Badge,null,"En kund i taget")
+          ),
+          React.createElement("div",{className:"flex items-center gap-3"},
+            React.createElement("div",{className:"rounded-xl border px-3 py-2 text-sm shadow-sm"},
+              React.createElement("div",{className:"font-semibold"},"Poäng"),
+              React.createElement("div",{className:"text-right text-lg"}, String(score))
+            ),
+            React.createElement("div",{className:"rounded-xl border px-3 py-2 text-sm shadow-sm"},
+              React.createElement("div",{className:"font-semibold"},"Kunder"),
+              React.createElement("div",{className:"text-right text-lg"}, String(customers))
+            ),
+            React.createElement("button",{onClick:()=>setSoundOn(s=>!s), className:"rounded-xl border px-3 py-2 text-sm shadow-sm hover:bg-neutral-50", "aria-label":"Växla ljud"}, soundOn ? "🔊 Ljud på" : "🔈 Ljud av")
+          )
+        )
+      ),
+
+      React.createElement("main",{className:"mx-auto grid max-w-6xl grid-cols-1 gap-4 p-4 md:grid-cols-12"},
+        React.createElement("section",{className:"md:col-span-7"},
+          React.createElement("div",{className:"rounded-2xl border bg-white p-4 shadow-sm"},
+            React.createElement("div",{className:"mb-3 flex items-center justify-between"},
+              React.createElement("h2",{className:"text-lg font-semibold"},"Varuband"),
+              React.createElement("div",{className:"text-sm text-neutral-500"}, String(beltItems.length), " varor")
+            ),
+            React.createElement("div",{className:"relative rounded-xl border bg-neutral-50 p-2"},
+              React.createElement("div",{className:"grid grid-rows-2 grid-flow-col auto-cols-[minmax(90px,1fr)] gap-2"},
+                (() => {
+                  const used = {};
+                  return beltItems.map((p,i)=>{
+                    const countUsed = used[p.id]||0;
+                    const isSelected = (scanned[p.id]||0) > countUsed;
+                    used[p.id] = countUsed + 1;
+                    return React.createElement("div",{
+                      key:i,
+                      className:`flex h-[86px] w-[96px] flex-col items-center justify-center rounded-lg border px-2 py-2 text-center text-sm shadow ${isSelected ? "bg-emerald-100 border-emerald-400 ring-1 ring-emerald-400" : "bg-white"}`
+                    },
+                      React.createElement("div",{className:"text-xl"}, p.emoji),
+                      React.createElement("div",{className:"mt-1 w-full text-[12px] leading-tight break-words"}, p.name),
+                      isSelected && React.createElement("div",{className:"mt-0.5 text-[10px] font-semibold text-emerald-700"},"✓ vald")
+                    );
+                  });
+                })()
+              ),
+              React.createElement("div",{className:"mt-1 text-center text-[10px] text-neutral-500"},"Tips: välj varor på skärmen till höger för att markera här.")
+            ),
+            React.createElement("div",{className:"mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4"},
+              React.createElement("div",{className:"rounded-xl border p-3"},
+                React.createElement("div",{className:"text-neutral-500"},"Att betala (kundens korg)"),
+                React.createElement("div",{className:"text-lg font-semibold"}, formatCurrency(totalCartPrice))
+              ),
+              React.createElement("div",{className:"rounded-xl border p-3"},
+                React.createElement("div",{className:"text-neutral-500"},"Skannat (dina val)"),
+                React.createElement("div",{className:"text-lg font-semibold"}, formatCurrency(scannedPrice))
+              ),
+              React.createElement("div",{className:"rounded-xl border p-3"},
+                React.createElement("div",{className:"text-neutral-500"},"Kvitto – kunden vill"),
+                React.createElement("div",{className:"text-lg font-semibold"}, wantsReceipt ? "JA" : "NEJ")
+              ),
+              React.createElement("div",{className:"rounded-xl border p-3"},
+                React.createElement("div",{className:"text-neutral-500"},"Kvitto – du har"),
+                React.createElement("div",{className:"text-lg font-semibold"}, printedReceipt ? "UTSKRIVET" : "INGET")
+              )
+            ),
+            React.createElement("div",{className:"mt-4 flex flex-wrap items-center gap-2"},
+              React.createElement("button",{onClick:()=>setPrintedReceipt(true), className:"rounded-xl bg-emerald-600 px-4 py-2 text-white shadow hover:bg-emerald-700"},"Skriv ut kvitto"),
+              React.createElement("button",{onClick:()=>setPrintedReceipt(false), className:"rounded-xl border px-4 py-2 shadow hover:bg-neutral-50"},"Ångra kvitto"),
+              React.createElement("button",{onClick:clearScans, className:"rounded-xl border px-4 py-2 shadow hover:bg-neutral-50"},"Rensa skannat"),
+              React.createElement("button",{onClick:evaluateAndNext, className:"rounded-xl bg-black px-4 py-2 text-white shadow hover:bg-neutral-800"},"Kontrollera & nästa kund")
+            ),
+            feedback && React.createElement("div",{className:"mt-3 rounded-xl border bg-neutral-50 p-3 text-sm"},
+              React.createElement("div",{className:"font-medium"},"Resultat för senaste kunden"),
+              React.createElement("div",null, feedback)
+            )
+          ),
+          printedReceipt && React.createElement("div",{className:"mt-4 rounded-2xl border bg-white p-4 shadow-sm"},
+            React.createElement("h3",{className:"text-lg font-semibold"},"Kvitto"),
+            React.createElement("div",{className:"mt-2 text-sm text-neutral-600"},"Tack för ditt köp!"),
+            React.createElement("div",{className:"mt-3 divide-y"},
+              Object.entries(scanned).map(([pid, qty])=>{
+                const p = productById(pid);
+                return React.createElement("div",{key:pid, className:"flex items-center justify-between py-2 text-sm"},
+                  React.createElement("div",{className:"flex items-center gap-2"},
+                    React.createElement("span",{className:"text-lg"}, p.emoji),
+                    `${p.name} × ${qty}`
+                  ),
+                  React.createElement("div",{className:"tabular-nums"}, formatCurrency(p.price * qty))
+                );
+              })
+            ),
+            React.createElement("div",{className:"mt-3 flex items-center justify-between border-t pt-3 font-semibold"},
+              React.createElement("span",null,"Summa"),
+              React.createElement("span",{className:"tabular-nums"}, formatCurrency(scannedPrice))
+            )
+          )
+        ),
+
+        React.createElement("section",{className:"md:col-span-5"},
+          React.createElement("div",{className:"rounded-2xl border bg-white p-4 shadow-sm"},
+            React.createElement("h2",{className:"mb-3 text-lg font-semibold"},"Skärm: bläddra & välj varor"),
+            React.createElement("div",{className:"mb-3 grid grid-cols-5 gap-2"},
+              ["mejeri","frukt och grönt","kött","hygien","bröd"].map(cat =>
+                React.createElement("button",{
+                  key:cat, onClick:()=>setCategory(cat),
+                  className:`rounded-xl border px-3 py-2 text-sm shadow-sm ${category===cat?"bg-emerald-600 text-white":"bg-white hover:bg-neutral-50"}`
+                },
+                  cat==="mejeri" && "🥛 Mejeri",
+                  cat==="frukt och grönt" && "🥬 Frukt & grönt",
+                  cat==="kött" && "🥩 Kött",
+                  cat==="hygien" && "🧼 Hygien",
+                  cat==="bröd" && "🍞 Bröd"
+                )
+              )
+            ),
+            React.createElement("input",{value:search,onChange:e=>setSearch(e.target.value),placeholder:"Sök produkt...",className:"mb-3 w-full rounded-xl border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"}),
+            React.createElement("div",{className:"grid grid-cols-2 gap-2 sm:grid-cols-3"},
+              filtered.map(p=>React.createElement("button",{key:p.id,onClick:()=>addScan(p.id),className:"flex flex-col items-center justify-center rounded-xl border bg-white p-3 text-center text-sm shadow-sm hover:bg-neutral-50"},
+                React.createElement("div",{className:"text-2xl"}, p.emoji),
+                React.createElement("div",{className:"mt-1 font-medium text-center break-words"}, p.name),
+                React.createElement("div",{className:"text-xs text-neutral-500"}, formatCurrency(p.price))
+              ))
+            ),
+            React.createElement("div",{className:"mt-4"},
+              React.createElement("div",{className:"mb-2 flex items-center justify-between"},
+                React.createElement("h3",{className:"font-semibold"},"Skannat"),
+                React.createElement(Badge,null, Object.values(scanned).reduce((a,b)=>a+b,0), " st")
+              ),
+              Object.keys(scanned).length===0
+                ? React.createElement("div",{className:"rounded-xl border bg-neutral-50 p-3 text-sm text-neutral-500"},"Inga varor skannade – tryck på produkter i listan för att lägga till.")
+                : React.createElement("div",{className:"divide-y rounded-xl border bg-white"},
+                    Object.entries(scanned).map(([pid, qty])=>{
+                      const p = productById(pid);
+                      return React.createElement("div",{key:pid,className:"flex items-center justify-between p-3 text-sm"},
+                        React.createElement("div",{className:"flex items-center gap-2"},
+                          React.createElement("span",{className:"text-xl"}, p.emoji),
+                          React.createElement("div",null,
+                            React.createElement("div",{className:"font-medium"}, p.name),
+                            React.createElement("div",{className:"text-xs text-neutral-500"}, formatCurrency(p.price), " styck")
+                          )
+                        ),
+                        React.createElement("div",{className:"flex items-center gap-2"},
+                          React.createElement("button",{onClick:()=>removeScan(pid), className:"rounded-lg border px-2 py-1 text-xs shadow-sm hover:bg-neutral-50","aria-label":"Minska antal"},"−"),
+                          React.createElement("span",{className:"w-6 text-center tabular-nums"}, String(qty)),
+                          React.createElement("button",{onClick:()=>addScan(pid), className:"rounded-lg border px-2 py-1 text-xs shadow-sm hover:bg-neutral-50","aria-label":"Öka antal"},"+")
+                        )
+                      );
+                    })
+                  )
+            )
+          )
+        )
+      )
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(Kassasimulator));
+
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').catch(console.error);
+        });
+      }
+    </script>
+  </body>
+</html>
